@@ -1,0 +1,20 @@
+V8 (Node.js) substring memory-retention cross-check
+Node version: v20.18.1, platform: linux x64
+
+[short-substring] substring length = 10, gc available = true
+  baseline heap:            2.83 MB
+  after building 4MB parent: 4.19 MB (delta 1.36 MB)
+  after slice + drop parent: 8.19 MB
+  after forced GC:           2.82 MB (delta from peak: -1.37 MB)
+
+[long-substring] substring length = 5000, gc available = true
+  baseline heap:            2.83 MB
+  after building 4MB parent: 4.11 MB (delta 1.29 MB)
+  after slice + drop parent: 8.11 MB
+  after forced GC:           6.83 MB (delta from peak: 2.72 MB)
+
+Summary:
+  short-substring: heap retained after GC vs baseline = -0.00 MB
+  long-substring: heap retained after GC vs baseline = 4.00 MB
+
+Note: this is a heap-size measurement, not a retaining-path proof (no heap snapshot was taken). It shows whether overall reported heap usage returns toward baseline after the parent reference is dropped and GC runs — consistent with, but not independent proof of, the SlicedString-retention mechanism described in README.md for the original Chrome-based tests.

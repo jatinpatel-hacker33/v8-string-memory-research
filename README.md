@@ -49,6 +49,48 @@ Source links:
 
 These links point to the main branch, not a revision pinned to the tested Chrome version.
 
+## Reproduction — Node.js cross-check
+
+The sections above describe the original Chrome-based observations. `node-repro.js` is a small,
+independently runnable script added later, in a **different V8 host embedding (Node.js, not
+Chrome)**, so the repo has at least one experiment anyone can execute and verify themselves
+instead of relying only on narrative description. It is not a reproduction of the exact original
+methodology — it's a separate, smaller cross-check.
+
+```bash
+node --expose-gc node-repro.js
+```
+
+Actual output from this environment (Node v20.18.1, linux x64), unedited:
+
+```
+V8 (Node.js) substring memory-retention cross-check
+Node version: v20.18.1, platform: linux x64
+
+[short-substring] substring length = 10, gc available = true
+  baseline heap:            2.83 MB
+  after building 4MB parent: 4.19 MB (delta 1.36 MB)
+  after slice + drop parent: 8.19 MB
+  after forced GC:           2.82 MB (delta from peak: -1.37 MB)
+
+[long-substring] substring length = 5000, gc available = true
+  baseline heap:            2.83 MB
+  after building 4MB parent: 4.11 MB (delta 1.29 MB)
+  after slice + drop parent: 8.11 MB
+  after forced GC:           6.83 MB (delta from peak: 2.72 MB)
+
+Summary:
+  short-substring: heap retained after GC vs baseline = -0.00 MB
+  long-substring: heap retained after GC vs baseline = 4.00 MB
+```
+
+**Reading this result:** the 10-character substring (below the ~13-character boundary cited in
+Key Observations above) let the heap return fully to baseline after GC — consistent with V8
+copying a short substring rather than creating a `SlicedString` that references the parent. The
+5,000-character substring retained ~4MB after GC — consistent with a `SlicedString` keeping the
+~4MB parent string reachable through the small child string. This is a heap-size measurement, not
+a retaining-path proof (no heap snapshot was captured here either — see Limitations).
+
 ## Limitations
 
 - Heap measurements are approximate and do not independently identify individual retaining references.
